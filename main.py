@@ -2,39 +2,10 @@ from argparse import ArgumentParser
 import random
 from sys import (stdin, stdout)
 
-def main():
-    parser = ArgumentParser(description='CLI Minesweeper')
-    parser.add_argument('--test', dest='test', default=False, action='store_true')
-    args = parser.parse_args()
-    stdout.write("Welcome to Minesweeper\n")
-    stdout.write("Please enter a board width: \n")
-    width = int(stdin.readline())
-    stdout.write("Please enter a board heght: \n")
-    height = int(stdin.readline())
-
-    # build board
-    board = Board(width, height, test=args.test)
-    board.display()
-
-    # main game loop
-    while not board.exploded:
-        import pdb
-        pdb.set_trace()
-        stdout.write("U X Y to reveal, F X Y to flag:\n")
-        # TODO: validate input
-        [command, x, y] = stdin.readline().split(' ')
-        x, y = int(x), int(y)
-        if command == 'U':
-            board.uncover_cell(x, y)
-        elif command == 'F':
-            board.flag_cell(x, y)
-
-        board.display()
-
-
 class Board(object):
     def __init__(self, width, height, bomb_count=None, test=False):
         self.test = test
+        # cover 1/3 of the board with bombs
         bomb_count = bomb_count or int((width * height) / 3)
         bombs = [BoardCell(is_bomb=True) for _ in range(bomb_count)]
         non_bombs = [BoardCell() for _ in range((width * height) - bomb_count)]
@@ -48,13 +19,13 @@ class Board(object):
                 if cell.is_bomb:
                     continue
                 adjacent_bombs = 0
-                for dx, dy in [(i, j) for j in range(-1, 2) if not(i == 0 and j == 0) for i in range(-1, 2)]:
-                    if (0 <= (y + dy) < height) and (0 <= (x + dx) < width):
-                        if self.board[y+dy][x+dx].is_bomb:
-                            adjacent_bombs += 1
+                for dx, dy in [(i, j) for j in range(-1, 2) for i in range(-1, 2)]:
+                    if dx == 0 and dy == 0:
+                        continue
+                    if (0 <= (y + dy) < height) and (0 <= (x + dx) < width) and self.board[y+dy][x+dx].is_bomb:
+                        adjacent_bombs += 1
 
                 self.board[y][x].set_adjacent_bombs(adjacent_bombs)
-
 
         self.exploded = False
 
@@ -73,6 +44,7 @@ class Board(object):
 
     def flag_cell(self, x, y):
         self.board[y][x].flag()
+
 
 class BoardCell(object):
     def __init__(self, adjacent_bombs=0, is_bomb=False):
@@ -101,6 +73,36 @@ class BoardCell(object):
         self.uncovered = True
         self.flagged = False
         return not self.char == '*'
+
+
+def main():
+    parser = ArgumentParser(description='CLI Minesweeper')
+    parser.add_argument('--test', dest='test', default=False, action='store_true')
+    args = parser.parse_args()
+
+    # initialize board
+    stdout.write("Welcome to Minesweeper\n")
+    stdout.write("Please enter a board width: \n")
+    width = int(stdin.readline())
+    stdout.write("Please enter a board heght: \n")
+    height = int(stdin.readline())
+
+    # build board
+    board = Board(width, height, test=args.test)
+    board.display()
+
+    # main game loop
+    while not board.exploded:
+        stdout.write("U X Y to reveal, F X Y to flag:\n")
+        # TODO: validate input
+        [command, x, y] = stdin.readline().split(' ')
+        x, y = int(x), int(y)
+        if command == 'U':
+            board.uncover_cell(x, y)
+        elif command == 'F':
+            board.flag_cell(x, y)
+
+        board.display()
 
 
 if __name__ == '__main__':
